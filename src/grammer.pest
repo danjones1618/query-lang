@@ -1,0 +1,18 @@
+WHITESPACE  = _{ " " | "\t" }
+char        =  { ASCII_ALPHANUMERIC | "." | "_" | "/" | "*" }
+exchar      =  { !"\"" ~ ANY }
+field       =  { char+ }
+excaped_str =  { "\"" ~ exchar* ~ "\"" }
+
+start = { SOI ~ expr ~ EOI }
+expr  = { and_expr | or_expr | comparison }
+
+and_expr_or_comparision = { and_expr | bracket_expr }
+or_expr_or_comparision  = { or_expr | bracket_expr }
+
+and_expr = { bracket_expr ~ "and" ~ and_expr_or_comparision }
+or_expr  = { bracket_expr ~ "or" ~ or_expr_or_comparision }
+
+bracket_expr = { "(" ~ expr ~ ")" | comparison }
+comparison   = { field ~ op ~ excaped_str }
+op           = { ("!=") | ("=~") | ("!~") | ("=") }
