@@ -1,0 +1,23 @@
+[project]
+name = "query-lang"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Dan Jones", email = "hello@danjones.dev" }
+]
+requires-python = ">=3.13"
+dependencies = []
+
+[project.scripts]
+query-lang = "query_lang:main"
+
+[tool.maturin]
+module-name = "query_lang._core"
+bindings = "pyo3"
+python-packages = ["query_lang"]
+python-source = "python"
+
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"

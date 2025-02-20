@@ -1,0 +1,3 @@
+__all__ = ["parse_to_string"]
+
+def parse_to_string(to_parse: str) -> str: ...
