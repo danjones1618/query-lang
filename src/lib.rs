@@ -1,5 +1,25 @@
 use pest::iterators::Pair;
 use pest::Parser;
+
+use pyo3::prelude::*;
+
+/// Formats the sum of two numbers as string.
+#[pyfunction]
+fn parse_to_string(to_parse: &str) -> PyResult<String> {
+    let res = match parse_query_string(&to_parse) {
+        Ok(e) => format!("{e:?}"),
+        Err(e) => format!("{e}"),
+    };
+    Ok(res)
+}
+
+#[pymodule]
+#[pyo3(name = "_core")]
+fn query_lang(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(parse_to_string, m)?)?;
+    Ok(())
+}
+
 #[derive(Debug)]
 enum MatchType {
     Eq,
