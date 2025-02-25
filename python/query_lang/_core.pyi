@@ -1,3 +1,8 @@
-__all__ = ["parse_to_string"]
+__all__ = [
+    "ParsingError",
+    "parse_to_string",
+]
+
+class ParsingError(Exception): ...
 
 def parse_to_string(to_parse: str) -> str: ...
