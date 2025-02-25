@@ -7,7 +7,10 @@ authors = [
     { name = "Dan Jones", email = "hello@danjones.dev" }
 ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "django>=5.1.6",
+    "rich>=13.9.4",
+]
 
 [project.scripts]
 query-lang = "query_lang:main"
