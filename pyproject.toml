@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.13"
 dependencies = [
     "django>=5.1.6",
+    "mypy>=1.15.0",
     "rich>=13.9.4",
 ]
 

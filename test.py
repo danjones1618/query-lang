@@ -1,4 +1,7 @@
-import query_lang._core as c
+import query_lang as c
 from rich import print
 
-print(c.parse_to_string('hi = "yes" and location = "UK"'))
+try:
+    print(c.parse_to_string('hi = "yes" and locatio(n = "UK"'))
+except c.ParsingError as e:
+    print(e)
