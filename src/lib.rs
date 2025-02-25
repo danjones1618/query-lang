@@ -1,16 +1,23 @@
 use pest::iterators::Pair;
 use pest::Parser;
+use pyo3::types::IntoPyDict;
 
 use pyo3::prelude::*;
 
 /// Formats the sum of two numbers as string.
 #[pyfunction]
-fn parse_to_string(to_parse: &str) -> PyResult<String> {
+fn parse_to_string(py: Python, to_parse: &str) -> PyResult<String> {
     let res = match parse_query_string(&to_parse) {
         Ok(e) => format!("{e:?}"),
         Err(e) => format!("{e}"),
     };
-    Ok(res)
+    let query_model = py
+        .import("django.db.models.sql.query")
+        .expect("TODO: handle django not installed");
+    let kwargs = vec![("hi", "yes"), ("name__ieq", "hello")].into_py_dict(py)?;
+    let q_object = query_model.getattr("Q")?.call((), Some(&kwargs))?;
+    let hmm = q_object.to_string();
+    Ok(format!("Ooo yaaasss::: {res} \nNooo: {hmm}"))
 }
 
 #[pymodule]
