@@ -1,17 +1,24 @@
 from typing import Protocol
 
 import pytest
-from django.db.models.query import Q
+from django.db.models import Q
 from pytest_benchmark.fixture import BenchmarkFixture
 
-import rust_pest as c
+import rust_pest
+from python_lark.parser import QueryParser as PythonLarkParser
 
 
 class ParserFn(Protocol):
     def __call__(self, to_parse: str) -> Q: ...
 
 
-@pytest.mark.parametrize("parsing_fn", [pytest.param(c.parse_to_django_q, id="rust_pest")])
+@pytest.mark.parametrize(
+    "parsing_fn",
+    [
+        pytest.param(rust_pest.parse_to_django_q, id="rust_pest"),
+        pytest.param(PythonLarkParser().parse_to_django_q, id="python_lark"),
+    ],
+)
 @pytest.mark.parametrize(
     ("lhs", "rhs"),
     [
