@@ -2,6 +2,7 @@ from typing import Protocol
 
 import pytest
 from django.db.models.query import Q
+from pytest_benchmark.fixture import BenchmarkFixture
 
 import rust_pest as c
 
@@ -45,5 +46,5 @@ class ParserFn(Protocol):
         ),
     ],
 )
-def test_parsing(parsing_fn: ParserFn, lhs: str, rhs: Q) -> None:
-    assert parsing_fn(lhs) == rhs
+def test_parsing(benchmark: BenchmarkFixture, parsing_fn: ParserFn, lhs: str, rhs: Q) -> None:
+    assert benchmark(parsing_fn, lhs) == rhs
