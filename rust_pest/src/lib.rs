@@ -192,7 +192,7 @@ impl<'a> QueryItem<'a> {
     {
         let type_string = match self.match_type {
             MatchType::Eq | MatchType::NotEq => "exact",
-            MatchType::NotRegex | MatchType::Regex => "re",
+            MatchType::NotRegex | MatchType::Regex => "regex",
         };
         let should_invert = match self.match_type {
             MatchType::Eq | MatchType::Regex => false,
