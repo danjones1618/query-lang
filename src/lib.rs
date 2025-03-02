@@ -70,13 +70,7 @@ mod python_wrappers {
             Ok(DjangoQueryInit(q_init))
         }
 
-        pub fn init_q<'pyinit>(
-            &self,
-            kwargs: &Bound<'py, PyDict>,
-        ) -> PyResult<DjangoQueryObject<'pyinit>>
-        where
-            'py: 'pyinit,
-        {
+        pub fn init_q(&self, kwargs: &Bound<'py, PyDict>) -> PyResult<DjangoQueryObject<'py>> {
             Ok(DjangoQueryObject(self.0.call((), Some(&kwargs))?))
         }
     }
@@ -120,14 +114,11 @@ mod python_wrappers {
 
 use python_wrappers::{DjangoQueryInit, DjangoQueryObject};
 
-fn expression_to_q<'py, 'pyinit>(
+fn expression_to_q<'py>(
     py: Python<'py>,
-    q_init: &'pyinit DjangoQueryInit<'py>,
+    q_init: &DjangoQueryInit<'py>,
     expression: &Expression,
-) -> PyResult<DjangoQueryObject<'py>>
-where
-    'py: 'pyinit,
-{
+) -> PyResult<DjangoQueryObject<'py>> {
     match expression {
         Expression::QueryItem(query_item) => query_item.into_q_object(py, q_init),
         Expression::CombinedExpression(combinator) => match combinator {
