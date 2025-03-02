@@ -6,7 +6,7 @@ use pyo3::types::IntoPyDict;
 
 use pyo3::prelude::*;
 
-#[pyclass(extends=PyException, module="query_lang._core", subclass)]
+#[pyclass(extends=PyException, module="rust_pest._core", subclass)]
 #[derive(Debug)]
 pub struct ParsingError {
     #[pyo3(get, set)]
