@@ -1,27 +1,15 @@
 [project]
-name = "query-lang"
+name = "parsing_benchmark"
 version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
-authors = [
-    { name = "Dan Jones", email = "hello@danjones.dev" }
-]
 requires-python = ">=3.13"
 dependencies = [
-    "django>=5.1.6",
-    "mypy>=1.15.0",
-    "rich>=13.9.4",
+  "mypy>=1.15.0",
+  "rich>=13.9.4",
+  "rust_pest",
 ]
 
-[project.scripts]
-query-lang = "query_lang:main"
+[tool.uv.sources]
+rust_pest = { workspace = true }
 
-[tool.maturin]
-module-name = "query_lang._core"
-bindings = "pyo3"
-python-packages = ["query_lang"]
-python-source = "python"
-
-[build-system]
-requires = ["maturin>=1.0,<2.0"]
-build-backend = "maturin"
+[tool.uv.workspace]
+members = ["rust_pest"]
