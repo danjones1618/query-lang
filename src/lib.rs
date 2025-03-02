@@ -7,6 +7,7 @@ use pyo3::types::IntoPyDict;
 use pyo3::prelude::*;
 
 #[pyclass(extends=PyException, module="query_lang._core", subclass)]
+#[derive(Debug)]
 pub struct ParsingError {
     #[pyo3(get, set)]
     message: String,
@@ -50,24 +51,113 @@ impl From<ParsingError> for PyErr {
     }
 }
 
-/// Formats the sum of two numbers as string.
+mod python_wrappers {
+    use pyo3::{prelude::*, types::PyDict};
+
+    /// Wrapper around Djanog's Q.__init__ function.
+    pub struct DjangoQueryInit<'py>(Bound<'py, PyAny>);
+
+    /// Wrapper around Django's Q object
+    pub struct DjangoQueryObject<'py>(Bound<'py, PyAny>);
+
+    impl<'py> DjangoQueryInit<'py> {
+        pub fn new<'pyinit>(py: Python<'py>) -> PyResult<DjangoQueryInit<'pyinit>>
+        where
+            'py: 'pyinit,
+        {
+            let query_model = py.import("django.db.models.sql.query")?;
+            let q_init = query_model.getattr("Q")?;
+            Ok(DjangoQueryInit(q_init))
+        }
+
+        pub fn init_q<'pyinit>(
+            &self,
+            kwargs: &Bound<'py, PyDict>,
+        ) -> PyResult<DjangoQueryObject<'pyinit>>
+        where
+            'py: 'pyinit,
+        {
+            Ok(DjangoQueryObject(self.0.call((), Some(&kwargs))?))
+        }
+    }
+
+    impl<'py> DjangoQueryObject<'py> {
+        pub fn invert(self) -> DjangoQueryObject<'py> {
+            DjangoQueryObject(
+                self.0
+                    .call_method0("__invert__")
+                    .expect("Q.__invert__ should not throw"),
+            )
+        }
+
+        pub fn and(self, other: DjangoQueryObject<'py>) -> DjangoQueryObject<'py> {
+            DjangoQueryObject(
+                self.0
+                    .call_method1("__and__", (other.0,))
+                    .expect("Q.__and__ should not throw"),
+            )
+        }
+
+        pub fn or(self, other: DjangoQueryObject<'py>) -> DjangoQueryObject<'py> {
+            DjangoQueryObject(
+                self.0
+                    .call_method1("__or__", (other.0,))
+                    .expect("Q.__and__ should not throw"),
+            )
+        }
+
+        pub fn unwrap(self) -> Bound<'py, PyAny> {
+            self.0
+        }
+    }
+
+    impl<'py> ToString for DjangoQueryObject<'py> {
+        fn to_string(&self) -> String {
+            self.0.to_string()
+        }
+    }
+}
+
+use python_wrappers::{DjangoQueryInit, DjangoQueryObject};
+
+fn expression_to_q<'py, 'pyinit>(
+    py: Python<'py>,
+    q_init: &'pyinit DjangoQueryInit<'py>,
+    expression: &Expression,
+) -> PyResult<DjangoQueryObject<'py>>
+where
+    'py: 'pyinit,
+{
+    match expression {
+        Expression::QueryItem(query_item) => query_item.into_q_object(py, q_init),
+        Expression::CombinedExpression(combinator) => match combinator {
+            Combinator::And { lhs, rhs } => {
+                let lhs = expression_to_q(py, q_init, lhs)?;
+                let rhs = expression_to_q(py, q_init, rhs)?;
+                Ok(lhs.and(rhs))
+            }
+            Combinator::Or { lhs, rhs } => {
+                let lhs = expression_to_q(py, q_init, lhs)?;
+                let rhs = expression_to_q(py, q_init, rhs)?;
+                Ok(lhs.or(rhs))
+            }
+        },
+    }
+}
+
 #[pyfunction]
-fn parse_to_string(py: Python, to_parse: &str) -> PyResult<String> {
+fn parse_to_django_q<'py>(py: Python<'py>, to_parse: &str) -> PyResult<Bound<'py, PyAny>> {
     let res = parse_query_string(&to_parse)?;
-    let query_model = py
-        .import("django.db.models.sql.query")
-        .expect("TODO: handle django not installed");
-    let kwargs = vec![("hi", "yes"), ("name__ieq", "hello")].into_py_dict(py)?;
-    let q_object = query_model.getattr("Q")?.call((), Some(&kwargs))?;
-    let hmm = q_object.to_string();
-    Ok(format!("Ooo yaaasss::: {res:?} \nNooo: {hmm}"))
+    let q_init = DjangoQueryInit::new(py)?;
+    let result = expression_to_q(py, &q_init, &res)?;
+    Ok(result.unwrap())
 }
 
 #[pymodule]
 #[pyo3(name = "_core")]
-fn query_lang_python_module(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(parse_to_string, m)?)?;
-    m.add("ParsingError", py.get_type::<ParsingError>())?;
+fn query_lang_python_module(py: Python, module: &Bound<'_, PyModule>) -> PyResult<()> {
+    module.add_function(wrap_pyfunction!(parse_to_django_q, module)?)?;
+    module.add("ParsingError", py.get_type::<ParsingError>())?;
     Ok(())
 }
 
@@ -94,14 +184,44 @@ impl TryFrom<&str> for MatchType {
 }
 
 #[derive(Debug)]
-struct QueryItem<'a> {
+pub struct QueryItem<'a> {
     attribute: &'a str,
     match_type: MatchType,
     match_value: &'a str,
 }
 
+impl<'a> QueryItem<'a> {
+    fn into_q_object<'py, 'pyinit>(
+        &'a self,
+        py: Python<'py>,
+        q_init: &'pyinit DjangoQueryInit<'py>,
+    ) -> PyResult<DjangoQueryObject<'py>>
+    where
+        'py: 'pyinit,
+    {
+        let type_string = match self.match_type {
+            MatchType::Eq | MatchType::NotEq => "exact",
+            MatchType::NotRegex | MatchType::Regex => "re",
+        };
+        let should_invert = match self.match_type {
+            MatchType::Eq | MatchType::Regex => false,
+            MatchType::NotEq | MatchType::NotRegex => true,
+        };
+        let query_string = format!("{}__{}", self.attribute, type_string);
+
+        let kwargs = vec![(query_string, self.match_value)].into_py_dict(py)?;
+        let mut q_object = q_init.init_q(&kwargs)?;
+
+        if should_invert {
+            q_object = q_object.invert();
+        }
+
+        Ok(q_object)
+    }
+}
+
 #[derive(Debug)]
-enum Combinator<'a> {
+pub enum Combinator<'a> {
     And {
         lhs: Box<Expression<'a>>,
         rhs: Box<Expression<'a>>,
@@ -153,9 +273,9 @@ mod parser {
             }
             Rule::comparison => {
                 let mut rules = rule.into_inner();
-                let attribute = rules.next().unwrap().as_span().as_str();
+                let attribute = rules.next().unwrap().into_inner().as_str();
                 let match_type: MatchType = rules.next().unwrap().as_str().try_into().unwrap();
-                let match_value = rules.next().unwrap().as_span().as_str();
+                let match_value = rules.next().unwrap().into_inner().as_str();
                 Expression::QueryItem(QueryItem {
                     attribute,
                     match_type,
