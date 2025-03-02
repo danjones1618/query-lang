@@ -1,4 +1,4 @@
-WHITESPACE  = _{ " " | "\t" }
+WHITESPACE  = _{ " " | "\t" | "\n" | "\r" }
 char        =  { ASCII_ALPHANUMERIC | "." | "_" | "/" | "*" }
 exchar      =  { !"\"" ~ ANY }
 field       =  { char+ }
