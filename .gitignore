@@ -1,2 +1,2 @@
 /target
-python/query_lang/_core.cpython-313-x86_64-linux-gnu.so
+rust_pest/python/rust_pest/_core.cpython-*.so
