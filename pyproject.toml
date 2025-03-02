@@ -16,7 +16,7 @@ members = ["rust_pest"]
 dev = [
     "mypy>=1.15.0",
     "pytest>=8.3.5",
-    "pytest-benchmark>=5.1.0",
+    "pytest-benchmark[histogram]>=5.1.0",
     "pytest-icdiff>=0.9",
     "ruff>=0.9.9",
 ]
